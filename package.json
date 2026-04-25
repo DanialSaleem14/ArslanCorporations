@@ -1,0 +1,38 @@
+{
+  "name": "arslan-corporation-website",
+  "version": "1.0.0",
+  "description": "Professional website for Arslan Corporation - Architects, Engineers & Developers",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx live-server --port=3000 --open=/index.html",
+    "start": "npx live-server --port=3000 --open=/index.html",
+    "build": "echo 'Static website - no build process required'",
+    "serve": "npx live-server --port=3000",
+    "deploy": "firebase deploy",
+    "deploy:hosting": "firebase deploy --only hosting"
+  },
+  "keywords": [
+    "construction",
+    "engineering",
+    "architecture",
+    "development",
+    "pakistan",
+    "islamabad",
+    "infrastructure",
+    "solar-energy"
+  ],
+  "author": "Arslan Corporation",
+  "license": "MIT",
+  "devDependencies": {
+    "firebase-tools": "^13.35.1",
+    "live-server": "^1.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arslan-corporation/website.git"
+  },
+  "homepage": "https://arslancorporation.com",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
