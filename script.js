@@ -103,12 +103,29 @@ document.addEventListener('DOMContentLoaded', function() {
             const orig = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
             btn.disabled = true;
-            setTimeout(() => {
-                alert('Thank you for your message! We will get back to you soon.');
-                form.reset();
+
+            fetch(form.action, {
+                method: form.method,
+                body: new FormData(form),
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Thank you for your message! We will get back to you soon.');
+                    form.reset();
+                } else {
+                    throw new Error('Submission failed');
+                }
+            })
+            .catch(() => {
+                alert('There was a problem sending your message. Please try again or contact us directly.');
+            })
+            .finally(() => {
                 btn.innerHTML = orig;
                 btn.disabled = false;
-            }, 2000);
+            });
         });
     }
 

@@ -377,23 +377,23 @@
                         </div>
                     </div>
                 </div>
-                <form class="contact-form" id="contactForm">
+                <form class="contact-form" id="contactForm" action="https://formspree.io/f/mjgngbee" method="POST">
                     <div class="form-row">
-                        <input type="text" placeholder="Your Name" required>
-                        <input type="email" placeholder="Your Email" required>
+                        <input type="text" name="name" placeholder="Your Name" required>
+                        <input type="email" name="email" placeholder="Your Email" required>
                     </div>
-                    <input type="tel" placeholder="Phone Number">
-                    <select>
+                    <input type="tel" name="phone" placeholder="Phone Number">
+                    <select name="service">
                         <option value="">Select Service</option>
-                        <option>Bridge/Culvert Construction</option>
-                        <option>Buildings</option>
-                        <option>Roads</option>
-                        <option>Wedding Marquee</option>
-                        <option>Parks</option>
-                        <option>Kids Playing Areas</option>
-                        <option>Play Grounds</option>
+                        <option value="Bridge/Culvert Construction">Bridge/Culvert Construction</option>
+                        <option value="Buildings">Buildings</option>
+                        <option value="Roads">Roads</option>
+                        <option value="Wedding Marquee">Wedding Marquee</option>
+                        <option value="Parks">Parks</option>
+                        <option value="Kids Playing Areas">Kids Playing Areas</option>
+                        <option value="Play Grounds">Play Grounds</option>
                     </select>
-                    <textarea placeholder="Your Message" rows="5" required></textarea>
+                    <textarea name="message" placeholder="Your Message" rows="5" required></textarea>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Send
                         Message</button>
                 </form>
