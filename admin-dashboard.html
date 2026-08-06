@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — Arslan Corporation</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="admin.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏗️%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+<nav class="navbar scrolled" id="navbar">
+    <div class="nav-container">
+        <a href="index.html" class="nav-logo"><h2>ARSLAN CORPORATION</h2><span>Admin Panel</span></a>
+        <div class="admin-topbar-actions">
+            <span class="admin-user-email" id="userEmail"></span>
+            <button class="btn btn-outline admin-logout-btn" id="logoutBtn"><i class="fas fa-right-from-bracket"></i> Logout</button>
+        </div>
+    </div>
+</nav>
+
+<section class="page-hero admin-hero">
+    <h1>Admin <span>Dashboard</span></h1>
+    <p>Manage your team members and Sale's Inventory listings</p>
+</section>
+
+<section class="section section-dark admin-section" id="authGate">
+    <div class="container">
+        <p style="text-align:center;color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Checking your session...</p>
+    </div>
+</section>
+
+<main id="dashboardContent" hidden>
+
+    <!-- ===== EMPLOYEES PANEL ===== -->
+    <section class="section section-dark admin-section">
+        <div class="container">
+            <div class="admin-panel-header">
+                <div>
+                    <span class="section-label">Team Management</span>
+                    <h2>Employees</h2>
+                </div>
+                <button class="btn btn-outline" id="seedBtn"><i class="fas fa-database"></i> Seed Default Team</button>
+            </div>
+
+            <form id="employeeForm" class="admin-form">
+                <div class="admin-form-grid">
+                    <input type="text" id="empName" placeholder="Full Name" required>
+                    <input type="text" id="empRole" placeholder="Role / Position" required>
+                </div>
+                <textarea id="empBio" placeholder="Short bio" rows="3" required></textarea>
+                <div class="admin-form-grid">
+                    <input type="url" id="empLinkedin" placeholder="LinkedIn URL (optional)">
+                    <input type="email" id="empEmail" placeholder="Email (optional)">
+                    <input type="text" id="empWhatsapp" placeholder="WhatsApp number, e.g. 923338568856 (optional)">
+                </div>
+                <div class="admin-upload-row">
+                    <label class="admin-file-label" for="empImage">
+                        <i class="fas fa-image"></i> <span id="empImageLabel">Choose photo</span>
+                    </label>
+                    <input type="file" id="empImage" accept="image/*">
+                    <button type="button" class="btn btn-outline" id="empCancelBtn" hidden><i class="fas fa-xmark"></i> Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="empSubmitBtn"><i class="fas fa-plus"></i> Add Employee</button>
+                </div>
+                <p class="admin-form-hint" id="empImageHint" hidden>Leave photo empty to keep the current one.</p>
+                <div id="empFormMsg" class="admin-error" hidden></div>
+            </form>
+
+            <div class="admin-item-grid" id="employeeList">
+                <p class="admin-empty" id="employeeEmpty" hidden>No team members yet. Add one above, or seed the default team.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== INVENTORY PANEL ===== -->
+    <section class="section section-darker admin-section">
+        <div class="container">
+            <div class="admin-panel-header">
+                <div>
+                    <span class="section-label">Sale's Inventory Management</span>
+                    <h2>Inventory Items</h2>
+                </div>
+                <a href="sales-inventory.html" class="btn btn-outline" target="_blank"><i class="fas fa-eye"></i> View Public Page</a>
+            </div>
+
+            <form id="inventoryForm" class="admin-form">
+                <div class="admin-form-grid">
+                    <input type="text" id="invName" placeholder="Item Name" required>
+                    <input type="text" id="invPrice" placeholder="Price (e.g. Rs. 150,000 or Contact for Price)" required>
+                </div>
+                <textarea id="invDescription" placeholder="Description" rows="3" required></textarea>
+                <div class="admin-upload-row">
+                    <label class="admin-file-label" for="invImage">
+                        <i class="fas fa-image"></i> <span id="invImageLabel">Choose photo</span>
+                    </label>
+                    <input type="file" id="invImage" accept="image/*">
+                    <button type="button" class="btn btn-outline" id="invCancelBtn" hidden><i class="fas fa-xmark"></i> Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="invSubmitBtn"><i class="fas fa-plus"></i> Add Item</button>
+                </div>
+                <p class="admin-form-hint" id="invImageHint" hidden>Leave photo empty to keep the current one.</p>
+                <div id="invFormMsg" class="admin-error" hidden></div>
+            </form>
+
+            <div class="admin-item-grid" id="inventoryList">
+                <p class="admin-empty" id="inventoryEmpty" hidden>No inventory items yet. Add one above.</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script type="module">
+    import { auth, db } from './firebase-config.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import {
+        collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    const authGate = document.getElementById('authGate');
+    const dashboardContent = document.getElementById('dashboardContent');
+    const userEmailEl = document.getElementById('userEmail');
+
+    onAuthStateChanged(auth, (user) => {
+        if (!user) {
+            window.location.href = 'admin-login.html';
+            return;
+        }
+        userEmailEl.textContent = user.email;
+        authGate.hidden = true;
+        dashboardContent.hidden = false;
+        initEmployees();
+        initInventory();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await signOut(auth);
+        window.location.href = 'admin-login.html';
+    });
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    // No Storage bucket needed — the photo is compressed client-side and
+    // stored directly inside the Firestore document as a data URL.
+    const MAX_IMAGE_CHARS = 900000; // stay under Firestore's 1MB document limit
+
+    function fileToDataUrl(file, maxDim = 900, quality = 0.75) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Could not read the selected file.'));
+            reader.onload = () => {
+                const img = new Image();
+                img.onerror = () => reject(new Error('Could not read the selected image.'));
+                img.onload = () => {
+                    let { width, height } = img;
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round(height * (maxDim / width));
+                            width = maxDim;
+                        } else {
+                            width = Math.round(width * (maxDim / height));
+                            height = maxDim;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // ===== EMPLOYEES =====
+    let editingEmployeeId = null;
+
+    function cancelEditEmployee() {
+        editingEmployeeId = null;
+        const form = document.getElementById('employeeForm');
+        form.reset();
+        document.getElementById('empImageLabel').textContent = 'Choose photo';
+        document.getElementById('empImageHint').hidden = true;
+        document.getElementById('empCancelBtn').hidden = true;
+        document.getElementById('empSubmitBtn').innerHTML = '<i class="fas fa-plus"></i> Add Employee';
+    }
+
+    function startEditEmployee(id, data) {
+        editingEmployeeId = id;
+        document.getElementById('empName').value = data.name || '';
+        document.getElementById('empRole').value = data.role || '';
+        document.getElementById('empBio').value = data.bio || '';
+        document.getElementById('empLinkedin').value = data.linkedin || '';
+        document.getElementById('empEmail').value = data.email || '';
+        document.getElementById('empWhatsapp').value = data.whatsapp || '';
+        document.getElementById('empImage').value = '';
+        document.getElementById('empImageLabel').textContent = 'Choose photo';
+        document.getElementById('empImageHint').hidden = false;
+        document.getElementById('empCancelBtn').hidden = false;
+        document.getElementById('empSubmitBtn').innerHTML = '<i class="fas fa-check"></i> Update Employee';
+        document.getElementById('employeeForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function initEmployees() {
+        const form = document.getElementById('employeeForm');
+        const submitBtn = document.getElementById('empSubmitBtn');
+        const cancelBtn = document.getElementById('empCancelBtn');
+        const msgBox = document.getElementById('empFormMsg');
+        const imageInput = document.getElementById('empImage');
+        const imageLabel = document.getElementById('empImageLabel');
+        const listEl = document.getElementById('employeeList');
+        const emptyEl = document.getElementById('employeeEmpty');
+
+        imageInput.addEventListener('change', () => {
+            imageLabel.textContent = imageInput.files[0] ? imageInput.files[0].name : 'Choose photo';
+        });
+
+        cancelBtn.addEventListener('click', () => cancelEditEmployee());
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msgBox.hidden = true;
+            const name = document.getElementById('empName').value.trim();
+            const role = document.getElementById('empRole').value.trim();
+            const bio = document.getElementById('empBio').value.trim();
+            const linkedin = document.getElementById('empLinkedin').value.trim();
+            const email = document.getElementById('empEmail').value.trim();
+            const whatsapp = document.getElementById('empWhatsapp').value.trim();
+            const file = imageInput.files[0];
+            const isEditing = !!editingEmployeeId;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${isEditing ? 'Updating...' : 'Adding...'}`;
+
+            try {
+                let imageUrl;
+                if (file) {
+                    imageUrl = await fileToDataUrl(file);
+                    if (imageUrl.length > MAX_IMAGE_CHARS) {
+                        throw new Error('Photo is too large even after compression. Please use a smaller image.');
+                    }
+                }
+                if (isEditing) {
+                    const updates = { name, role, bio, linkedin, email, whatsapp };
+                    if (imageUrl !== undefined) updates.imageUrl = imageUrl;
+                    await updateDoc(doc(db, 'employees', editingEmployeeId), updates);
+                    cancelEditEmployee();
+                } else {
+                    await addDoc(collection(db, 'employees'), {
+                        name, role, bio, linkedin, email, whatsapp, imageUrl: imageUrl || '',
+                        createdAt: serverTimestamp()
+                    });
+                    form.reset();
+                    imageLabel.textContent = 'Choose photo';
+                }
+            } catch (err) {
+                msgBox.textContent = `Failed to ${isEditing ? 'update' : 'add'} employee: ` + err.message;
+                msgBox.hidden = false;
+            } finally {
+                submitBtn.disabled = false;
+                if (editingEmployeeId) {
+                    submitBtn.innerHTML = '<i class="fas fa-check"></i> Update Employee';
+                } else {
+                    submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Employee';
+                }
+            }
+        });
+
+        const q = query(collection(db, 'employees'), orderBy('createdAt', 'asc'));
+        onSnapshot(q, (snapshot) => {
+            listEl.querySelectorAll('.admin-item-card').forEach(el => el.remove());
+            emptyEl.hidden = !snapshot.empty;
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const card = document.createElement('div');
+                card.className = 'admin-item-card';
+                card.innerHTML = `
+                    <div class="admin-item-thumb">
+                        ${data.imageUrl ? `<img src="${data.imageUrl}" alt="${escapeHtml(data.name)}">` : '<i class="fas fa-user"></i>'}
+                    </div>
+                    <div class="admin-item-body">
+                        <h4>${escapeHtml(data.name)}</h4>
+                        <span class="admin-item-tag">${escapeHtml(data.role)}</span>
+                        <p>${escapeHtml(data.bio)}</p>
+                    </div>
+                    <div class="admin-card-actions">
+                        <button class="admin-edit-btn" title="Edit"><i class="fas fa-pen"></i></button>
+                        <button class="admin-delete-btn" title="Remove"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                card.querySelector('.admin-edit-btn').addEventListener('click', () => {
+                    startEditEmployee(docSnap.id, data);
+                });
+                card.querySelector('.admin-delete-btn').addEventListener('click', async () => {
+                    if (!confirm(`Remove ${data.name} from the team?`)) return;
+                    if (editingEmployeeId === docSnap.id) cancelEditEmployee();
+                    await deleteDoc(doc(db, 'employees', docSnap.id));
+                });
+                listEl.appendChild(card);
+            });
+        });
+
+        document.getElementById('seedBtn').addEventListener('click', async () => {
+            const snap = await getDocs(collection(db, 'employees'));
+            if (!snap.empty) {
+                alert('The employees collection already has data. Seeding is only for an empty collection.');
+                return;
+            }
+            if (!confirm('Seed the default 12 team members from the current website into Firestore?')) return;
+            for (const emp of DEFAULT_EMPLOYEES) {
+                await addDoc(collection(db, 'employees'), { ...emp, createdAt: serverTimestamp() });
+            }
+            alert('Default team seeded.');
+        });
+    }
+
+    const DEFAULT_EMPLOYEES = [
+        { name: 'Rana Arslan Munir', role: 'Project Engineer', bio: 'Experienced project engineer with expertise in construction project management, technical planning, and execution of complex infrastructure projects.', imageUrl: 'images/Arslan.png', linkedin: 'https://www.linkedin.com/in/arslan-munir-38144225a/', email: 'arslancorporation001@gmail.com', whatsapp: '923338568856' },
+        { name: 'Sharjeel Ahmed', role: 'Accounting and Finance Manager', bio: 'Leads financial planning, accounting operations, and budget control for Arslan Corporation. Manages cash flow, financial reporting, and ensures compliance with tax and audit requirements.', imageUrl: 'images/sharjeel.png', linkedin: '', email: '', whatsapp: '923338568856' },
+        { name: 'Danial Saleem', role: 'IT Manager', bio: 'Expert software engineer specializing in web and mobile application development, testing, and maintenance for construction projects.', imageUrl: 'images/Danial.jpg', linkedin: 'https://www.linkedin.com/in/danial-saleem-38144225a/', email: '', whatsapp: '923247088554' },
+        { name: 'Tajamul Hussain', role: 'Construction Manager', bio: 'Experienced construction manager with expertise in project planning, team leadership, and ensuring successful completion of infrastructure projects.', imageUrl: 'images/Tajamul Hussain.jpeg', linkedin: '', email: '', whatsapp: '923338568856' },
+        { name: 'Abdullah Ahmed', role: 'Marketing Officer', bio: "Strategic marketing professional responsible for business development, client relations, and promoting Arslan Corporation's services across Pakistan.", imageUrl: '', linkedin: '', email: '', whatsapp: '923338568856' },
+        { name: 'Noman Ammar', role: 'Chief Electric Engineer', bio: 'Leads electrical engineering design and delivery for Arslan Corporation. Oversees power distribution, lighting systems, and electrical safety compliance across all construction projects.', imageUrl: 'images/nouman.jpeg', linkedin: '', email: '', whatsapp: '923338568856' },
+        { name: 'Noman', role: 'Quantity Surveyor / Project Estimator', bio: 'Expert in cost estimation, quantity surveying, and project budgeting. Ensures accurate cost analysis and budget management for all construction projects.', imageUrl: '', linkedin: '', email: '', whatsapp: '923338568856' },
+        { name: 'Irfan', role: 'Electrical Engineer', bio: 'Specialized electrical engineer responsible for electrical systems design, installation, and maintenance across all construction projects.', imageUrl: '', linkedin: '', email: '', whatsapp: '923338568856' },
+        { name: 'Abdul Malik', role: 'Mechanical Engineer', bio: 'Expert mechanical engineer specializing in HVAC systems, mechanical installations, and equipment maintenance for construction projects.', imageUrl: '', linkedin: '', email: '', whatsapp: '923338568856' },
+        { name: 'Sohail Afzal', role: 'Structural Engineer', bio: 'Specialized structural engineer responsible for designing and analyzing building structures to ensure safety and compliance.', imageUrl: 'images/Sohail Afzal.jpeg', linkedin: '', email: '', whatsapp: '923338568856' },
+        { name: 'Abdur Rehman', role: 'Architect', bio: 'Creative architect specializing in modern building designs and sustainable architecture. Leads design teams for residential and commercial projects.', imageUrl: 'images/abdur.jpeg', linkedin: '', email: '', whatsapp: '923338568856' }
+    ];
+
+    // ===== INVENTORY =====
+    let editingInventoryId = null;
+
+    function cancelEditInventory() {
+        editingInventoryId = null;
+        const form = document.getElementById('inventoryForm');
+        form.reset();
+        document.getElementById('invImageLabel').textContent = 'Choose photo';
+        document.getElementById('invImageHint').hidden = true;
+        document.getElementById('invCancelBtn').hidden = true;
+        document.getElementById('invSubmitBtn').innerHTML = '<i class="fas fa-plus"></i> Add Item';
+    }
+
+    function startEditInventory(id, data) {
+        editingInventoryId = id;
+        document.getElementById('invName').value = data.name || '';
+        document.getElementById('invPrice').value = data.price || '';
+        document.getElementById('invDescription').value = data.description || '';
+        document.getElementById('invImage').value = '';
+        document.getElementById('invImageLabel').textContent = 'Choose photo';
+        document.getElementById('invImageHint').hidden = false;
+        document.getElementById('invCancelBtn').hidden = false;
+        document.getElementById('invSubmitBtn').innerHTML = '<i class="fas fa-check"></i> Update Item';
+        document.getElementById('inventoryForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function initInventory() {
+        const form = document.getElementById('inventoryForm');
+        const submitBtn = document.getElementById('invSubmitBtn');
+        const cancelBtn = document.getElementById('invCancelBtn');
+        const msgBox = document.getElementById('invFormMsg');
+        const imageInput = document.getElementById('invImage');
+        const imageLabel = document.getElementById('invImageLabel');
+        const listEl = document.getElementById('inventoryList');
+        const emptyEl = document.getElementById('inventoryEmpty');
+
+        imageInput.addEventListener('change', () => {
+            imageLabel.textContent = imageInput.files[0] ? imageInput.files[0].name : 'Choose photo';
+        });
+
+        cancelBtn.addEventListener('click', () => cancelEditInventory());
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msgBox.hidden = true;
+            const name = document.getElementById('invName').value.trim();
+            const price = document.getElementById('invPrice').value.trim();
+            const description = document.getElementById('invDescription').value.trim();
+            const file = imageInput.files[0];
+            const isEditing = !!editingInventoryId;
+
+            if (!file && !isEditing) {
+                msgBox.textContent = 'Please choose a photo for this item.';
+                msgBox.hidden = false;
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${isEditing ? 'Updating...' : 'Adding...'}`;
+
+            try {
+                let imageUrl;
+                if (file) {
+                    imageUrl = await fileToDataUrl(file);
+                    if (imageUrl.length > MAX_IMAGE_CHARS) {
+                        throw new Error('Photo is too large even after compression. Please use a smaller image.');
+                    }
+                }
+                if (isEditing) {
+                    const updates = { name, price, description };
+                    if (imageUrl !== undefined) updates.imageUrl = imageUrl;
+                    await updateDoc(doc(db, 'inventory', editingInventoryId), updates);
+                    cancelEditInventory();
+                } else {
+                    await addDoc(collection(db, 'inventory'), {
+                        name, price, description, imageUrl, sold: false,
+                        createdAt: serverTimestamp()
+                    });
+                    form.reset();
+                    imageLabel.textContent = 'Choose photo';
+                }
+            } catch (err) {
+                msgBox.textContent = `Failed to ${isEditing ? 'update' : 'add'} item: ` + err.message;
+                msgBox.hidden = false;
+            } finally {
+                submitBtn.disabled = false;
+                if (editingInventoryId) {
+                    submitBtn.innerHTML = '<i class="fas fa-check"></i> Update Item';
+                } else {
+                    submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Item';
+                }
+            }
+        });
+
+        const q = query(collection(db, 'inventory'), orderBy('createdAt', 'desc'));
+        onSnapshot(q, (snapshot) => {
+            listEl.querySelectorAll('.admin-item-card').forEach(el => el.remove());
+            emptyEl.hidden = !snapshot.empty;
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const card = document.createElement('div');
+                card.className = 'admin-item-card';
+                card.innerHTML = `
+                    <div class="admin-item-thumb">
+                        ${data.imageUrl ? `<img src="${data.imageUrl}" alt="${escapeHtml(data.name)}">` : '<i class="fas fa-box"></i>'}
+                        ${data.sold ? '<div class="sold-stamp">Sold</div>' : ''}
+                    </div>
+                    <div class="admin-item-body">
+                        <h4>${escapeHtml(data.name)}</h4>
+                        <span class="admin-item-tag">${escapeHtml(data.price)}</span>
+                        <p>${escapeHtml(data.description)}</p>
+                    </div>
+                    <div class="admin-card-actions">
+                        <button class="admin-sold-btn${data.sold ? ' is-sold' : ''}" title="${data.sold ? 'Mark as available' : 'Mark as sold'}"><i class="fas fa-tag"></i></button>
+                        <button class="admin-edit-btn" title="Edit"><i class="fas fa-pen"></i></button>
+                        <button class="admin-delete-btn" title="Remove"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                card.querySelector('.admin-sold-btn').addEventListener('click', async () => {
+                    await updateDoc(doc(db, 'inventory', docSnap.id), { sold: !data.sold });
+                });
+                card.querySelector('.admin-edit-btn').addEventListener('click', () => {
+                    startEditInventory(docSnap.id, data);
+                });
+                card.querySelector('.admin-delete-btn').addEventListener('click', async () => {
+                    if (!confirm(`Remove "${data.name}" from Sale's Inventory?`)) return;
+                    if (editingInventoryId === docSnap.id) cancelEditInventory();
+                    await deleteDoc(doc(db, 'inventory', docSnap.id));
+                });
+                listEl.appendChild(card);
+            });
+        });
+    }
+</script>
+</body>
+</html>

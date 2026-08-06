@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sale's Inventory — Arslan Corporation</title>
+    <meta name="description" content="Browse items currently available for sale from Arslan Corporation.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="admin.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏗️%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <a href="index.html" class="nav-logo"><h2>ARSLAN CORPORATION</h2><span>Architects • Engineers • Developers</span></a>
+        <ul class="nav-menu" id="navMenu">
+            <li><a href="index.html#home" class="nav-link">Home</a></li>
+            <li><a href="index.html#about" class="nav-link">About</a></li>
+            <li><a href="index.html#expertise" class="nav-link">Expertise</a></li>
+            <li><a href="index.html#projects" class="nav-link">Projects</a></li>
+            <li><a href="employees.html" class="nav-link">Team</a></li>
+            <li><a href="subsidiaries.html" class="nav-link">Subsidiaries</a></li>
+            <li><a href="experience.html" class="nav-link">Experience</a></li>
+            <li><a href="sales-inventory.html" class="nav-link active">Inventory</a></li>
+            <li><a href="index.html#contact" class="nav-link">Contact</a></li>
+        </ul>
+        <div class="hamburger" id="hamburger"><span class="bar"></span><span class="bar"></span><span class="bar"></span></div>
+    </div>
+</nav>
+
+<section class="page-hero">
+    <h1>Sale's <span>Inventory</span></h1>
+    <p>Items currently available for sale from Arslan Corporation</p>
+    <div class="breadcrumb"><a href="index.html">Home</a><span>/</span><span>Sale's Inventory</span></div>
+</section>
+
+<section class="section section-dark">
+    <div class="container">
+        <div class="inventory-grid" id="inventoryGrid">
+            <p class="admin-empty" id="inventoryLoading"><i class="fas fa-spinner fa-spin"></i> Loading inventory...</p>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h3>ARSLAN CORPORATION</h3>
+                <p>Building tomorrow's infrastructure today. A leading construction company in Islamabad since 2004.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="https://wa.me/923338568856"><i class="fab fa-whatsapp"></i></a>
+                </div>
+                <img src="logo1.png" alt="Arslan Corporation Logo" class="footer-logo">
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="index.html#about">About Us</a></li>
+                    <li><a href="index.html#projects">Projects</a></li>
+                    <li><a href="employees.html">Our Team</a></li>
+                    <li><a href="subsidiaries.html">Subsidiaries</a></li>
+                    <li><a href="experience.html">Experience</a></li>
+                    <li><a href="sales-inventory.html">Sale's Inventory</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Services</h4>
+                <ul>
+                    <li><a href="index.html#expertise">Bridge Construction</a></li>
+                    <li><a href="index.html#expertise">Buildings</a></li>
+                    <li><a href="index.html#expertise">Roads</a></li>
+                    <li><a href="index.html#expertise">Parks & Playgrounds</a></li>
+                    <li><a href="index.html#expertise">Wedding Marquees</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <p><i class="fas fa-map-marker-alt"></i> 5 St 1, H-13, Islamabad</p>
+                <p><i class="fas fa-phone"></i> <a href="tel:+923338568856">+92 333 8568856</a></p>
+                <p><i class="fas fa-envelope"></i> <a href="mailto:arslancorporation001@gmail.com">arslancorporation001@gmail.com</a></p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Arslan Corporation. All rights reserved. Created by <a href="https://wa.me/923247088554" target="_blank" class="credit-link">Khalid Tech</a></p>
+            <p>Architects • Engineers • Developers</p>
+            <p><a href="admin-login.html" class="admin-footer-link">Admin</a></p>
+        </div>
+    </div>
+</footer>
+
+<a href="https://wa.me/923338568856" class="whatsapp-float" target="_blank" title="Chat on WhatsApp">
+    <i class="fab fa-whatsapp"></i>
+</a>
+
+<script src="script.js"></script>
+<script type="module">
+    import { db } from './firebase-config.js';
+    import { collection, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    const grid = document.getElementById('inventoryGrid');
+    const loadingEl = document.getElementById('inventoryLoading');
+
+    const q = query(collection(db, 'inventory'), orderBy('createdAt', 'desc'));
+    onSnapshot(q, (snapshot) => {
+        loadingEl.remove();
+        grid.querySelectorAll('.inventory-card').forEach(el => el.remove());
+
+        if (snapshot.empty) {
+            grid.innerHTML = '<p class="admin-empty">No items are currently listed for sale. Please check back soon.</p>';
+            return;
+        }
+
+        snapshot.forEach((docSnap) => {
+            const item = docSnap.data();
+            const card = document.createElement('div');
+            card.className = 'inventory-card reveal';
+            card.innerHTML = `
+                <div class="inventory-img">
+                    <img src="${item.imageUrl}" alt="${escapeHtml(item.name)}">
+                    ${item.sold ? '<div class="sold-stamp">Sold</div>' : ''}
+                    <div class="inventory-price">${escapeHtml(item.price)}</div>
+                </div>
+                <div class="inventory-content">
+                    <h3>${escapeHtml(item.name)}</h3>
+                    <p>${escapeHtml(item.description)}</p>
+                    ${item.sold
+                        ? '<button class="btn btn-outline" disabled><i class="fas fa-ban"></i> Sold Out</button>'
+                        : `<a href="https://wa.me/923338568856?text=${encodeURIComponent('Hi, I am interested in: ' + item.name)}" class="btn btn-primary" target="_blank"><i class="fab fa-whatsapp"></i> Inquire</a>`}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        const reveals = grid.querySelectorAll('.reveal');
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+        reveals.forEach(el => revealObserver.observe(el));
+    }, (error) => {
+        loadingEl.remove();
+        grid.innerHTML = '<p class="admin-empty">Could not load inventory right now. Please try again later.</p>';
+        console.error(error);
+    });
+</script>
+</body>
+</html>

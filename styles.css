@@ -91,10 +91,11 @@ a:hover {
 
 .nav-container {
   display: flex;
+  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 20px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto
 }
 
@@ -114,18 +115,36 @@ a:hover {
   display: block
 }
 
+/* Below 1200px the nav-menu leaves normal flow entirely (it becomes the
+   fixed-position mobile drawer), so the logo is free to wrap onto two
+   lines there like before — it only needs to hold its size and stay on
+   one line while it's actually sharing the row with the full link list. */
+@media (min-width: 1201px) {
+  .nav-logo {
+    flex-shrink: 0
+  }
+
+  .nav-logo h2,
+  .nav-logo span {
+    white-space: nowrap
+  }
+}
+
 .nav-menu {
   display: flex;
-  gap: 1.8rem;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 1.2rem;
   list-style: none
 }
 
 .nav-link {
   color: var(--text);
   font-weight: 500;
-  font-size: .85rem;
+  font-size: .8rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: .5px;
+  white-space: nowrap;
   position: relative;
   padding-bottom: 4px
 }
@@ -153,6 +172,7 @@ a:hover {
 .hamburger {
   display: none;
   cursor: pointer;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 5px
 }
@@ -1310,7 +1330,10 @@ a:hover {
   }
 }
 
-@media(max-width:768px) {
+/* Nav switches to the hamburger menu earlier than other mobile breakpoints
+   because there are now enough links (incl. Inventory) that they stop
+   fitting on one line well before a phone-sized viewport. */
+@media(max-width:1200px) {
   .nav-menu {
     position: fixed;
     top: 0;
@@ -1344,7 +1367,9 @@ a:hover {
   .hamburger.active .bar:nth-child(3) {
     transform: rotate(-45deg) translate(5px, -5px)
   }
+}
 
+@media(max-width:768px) {
   .hero-content h1 {
     font-size: 2.2rem
   }
