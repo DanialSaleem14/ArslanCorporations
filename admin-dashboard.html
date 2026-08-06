@@ -95,13 +95,14 @@
                 <textarea id="invDescription" placeholder="Description" rows="3" required></textarea>
                 <div class="admin-upload-row">
                     <label class="admin-file-label" for="invImage">
-                        <i class="fas fa-image"></i> <span id="invImageLabel">Choose photo</span>
+                        <i class="fas fa-images"></i> <span id="invImageLabel">Choose photos</span>
                     </label>
-                    <input type="file" id="invImage" accept="image/*">
+                    <input type="file" id="invImage" accept="image/*" multiple>
                     <button type="button" class="btn btn-outline" id="invCancelBtn" hidden><i class="fas fa-xmark"></i> Cancel</button>
                     <button type="submit" class="btn btn-primary" id="invSubmitBtn"><i class="fas fa-plus"></i> Add Item</button>
                 </div>
-                <p class="admin-form-hint" id="invImageHint" hidden>Leave photo empty to keep the current one.</p>
+                <p class="admin-form-hint">You can select multiple photos at once (up to 6).</p>
+                <p class="admin-form-hint" id="invImageHint" hidden>Leave photos empty to keep the current ones.</p>
                 <div id="invFormMsg" class="admin-error" hidden></div>
             </form>
 
@@ -340,11 +341,31 @@
     // ===== INVENTORY =====
     let editingInventoryId = null;
 
+    const MAX_IMAGES_PER_ITEM = 6;
+    const MAX_TOTAL_IMAGE_CHARS = 900000; // shared budget across all photos of one item
+
+    async function filesToDataUrls(fileList) {
+        const files = Array.from(fileList).slice(0, MAX_IMAGES_PER_ITEM);
+        const urls = [];
+        let total = 0;
+        for (const file of files) {
+            // Smaller per-image budget than a single-photo upload since several
+            // photos have to share the same 1MB Firestore document limit.
+            const url = await fileToDataUrl(file, 700, 0.7);
+            total += url.length;
+            if (total > MAX_TOTAL_IMAGE_CHARS) {
+                throw new Error('These photos are too large together even after compression. Please use fewer or smaller photos.');
+            }
+            urls.push(url);
+        }
+        return urls;
+    }
+
     function cancelEditInventory() {
         editingInventoryId = null;
         const form = document.getElementById('inventoryForm');
         form.reset();
-        document.getElementById('invImageLabel').textContent = 'Choose photo';
+        document.getElementById('invImageLabel').textContent = 'Choose photos';
         document.getElementById('invImageHint').hidden = true;
         document.getElementById('invCancelBtn').hidden = true;
         document.getElementById('invSubmitBtn').innerHTML = '<i class="fas fa-plus"></i> Add Item';
@@ -356,7 +377,7 @@
         document.getElementById('invPrice').value = data.price || '';
         document.getElementById('invDescription').value = data.description || '';
         document.getElementById('invImage').value = '';
-        document.getElementById('invImageLabel').textContent = 'Choose photo';
+        document.getElementById('invImageLabel').textContent = 'Choose photos';
         document.getElementById('invImageHint').hidden = false;
         document.getElementById('invCancelBtn').hidden = false;
         document.getElementById('invSubmitBtn').innerHTML = '<i class="fas fa-check"></i> Update Item';
@@ -374,7 +395,10 @@
         const emptyEl = document.getElementById('inventoryEmpty');
 
         imageInput.addEventListener('change', () => {
-            imageLabel.textContent = imageInput.files[0] ? imageInput.files[0].name : 'Choose photo';
+            const n = imageInput.files.length;
+            if (n === 0) imageLabel.textContent = 'Choose photos';
+            else if (n === 1) imageLabel.textContent = imageInput.files[0].name;
+            else imageLabel.textContent = `${n} photos selected`;
         });
 
         cancelBtn.addEventListener('click', () => cancelEditInventory());
@@ -385,11 +409,11 @@
             const name = document.getElementById('invName').value.trim();
             const price = document.getElementById('invPrice').value.trim();
             const description = document.getElementById('invDescription').value.trim();
-            const file = imageInput.files[0];
+            const files = imageInput.files;
             const isEditing = !!editingInventoryId;
 
-            if (!file && !isEditing) {
-                msgBox.textContent = 'Please choose a photo for this item.';
+            if (files.length === 0 && !isEditing) {
+                msgBox.textContent = 'Please choose at least one photo for this item.';
                 msgBox.hidden = false;
                 return;
             }
@@ -398,25 +422,26 @@
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${isEditing ? 'Updating...' : 'Adding...'}`;
 
             try {
-                let imageUrl;
-                if (file) {
-                    imageUrl = await fileToDataUrl(file);
-                    if (imageUrl.length > MAX_IMAGE_CHARS) {
-                        throw new Error('Photo is too large even after compression. Please use a smaller image.');
-                    }
+                let images;
+                if (files.length > 0) {
+                    images = await filesToDataUrls(files);
                 }
                 if (isEditing) {
                     const updates = { name, price, description };
-                    if (imageUrl !== undefined) updates.imageUrl = imageUrl;
+                    if (images !== undefined) {
+                        updates.images = images;
+                        updates.imageUrl = images[0];
+                    }
                     await updateDoc(doc(db, 'inventory', editingInventoryId), updates);
                     cancelEditInventory();
                 } else {
                     await addDoc(collection(db, 'inventory'), {
-                        name, price, description, imageUrl, sold: false,
+                        name, price, description, sold: false,
+                        images, imageUrl: images[0],
                         createdAt: serverTimestamp()
                     });
                     form.reset();
-                    imageLabel.textContent = 'Choose photo';
+                    imageLabel.textContent = 'Choose photos';
                 }
             } catch (err) {
                 msgBox.textContent = `Failed to ${isEditing ? 'update' : 'add'} item: ` + err.message;
@@ -437,11 +462,13 @@
             emptyEl.hidden = !snapshot.empty;
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
+                const images = (data.images && data.images.length) ? data.images : (data.imageUrl ? [data.imageUrl] : []);
                 const card = document.createElement('div');
                 card.className = 'admin-item-card';
                 card.innerHTML = `
                     <div class="admin-item-thumb">
-                        ${data.imageUrl ? `<img src="${data.imageUrl}" alt="${escapeHtml(data.name)}">` : '<i class="fas fa-box"></i>'}
+                        ${images[0] ? `<img src="${images[0]}" alt="${escapeHtml(data.name)}">` : '<i class="fas fa-box"></i>'}
+                        ${images.length > 1 ? `<div class="admin-photo-count"><i class="fas fa-images"></i> ${images.length}</div>` : ''}
                         ${data.sold ? '<div class="sold-stamp">Sold</div>' : ''}
                     </div>
                     <div class="admin-item-body">

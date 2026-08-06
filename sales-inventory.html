@@ -111,6 +111,31 @@
         return div.innerHTML;
     }
 
+    function setupGallery(card, images) {
+        let index = 0;
+        const img = card.querySelector('.inventory-img img');
+        const dots = card.querySelectorAll('.gallery-dot');
+
+        function show(i) {
+            index = (i + images.length) % images.length;
+            img.src = images[index];
+            dots.forEach((d, di) => d.classList.toggle('active', di === index));
+        }
+
+        card.querySelector('.gallery-nav.prev').addEventListener('click', (e) => {
+            e.preventDefault();
+            show(index - 1);
+        });
+        card.querySelector('.gallery-nav.next').addEventListener('click', (e) => {
+            e.preventDefault();
+            show(index + 1);
+        });
+        dots.forEach((dot, i) => dot.addEventListener('click', (e) => {
+            e.preventDefault();
+            show(i);
+        }));
+    }
+
     const grid = document.getElementById('inventoryGrid');
     const loadingEl = document.getElementById('inventoryLoading');
 
@@ -126,11 +151,17 @@
 
         snapshot.forEach((docSnap) => {
             const item = docSnap.data();
+            const images = (item.images && item.images.length) ? item.images : (item.imageUrl ? [item.imageUrl] : []);
             const card = document.createElement('div');
             card.className = 'inventory-card reveal';
             card.innerHTML = `
                 <div class="inventory-img">
-                    <img src="${item.imageUrl}" alt="${escapeHtml(item.name)}">
+                    <img src="${images[0] || ''}" alt="${escapeHtml(item.name)}">
+                    ${images.length > 1 ? `
+                        <button type="button" class="gallery-nav prev" aria-label="Previous photo"><i class="fas fa-chevron-left"></i></button>
+                        <button type="button" class="gallery-nav next" aria-label="Next photo"><i class="fas fa-chevron-right"></i></button>
+                        <div class="gallery-dots">${images.map((_, i) => `<span class="gallery-dot${i === 0 ? ' active' : ''}"></span>`).join('')}</div>
+                    ` : ''}
                     ${item.sold ? '<div class="sold-stamp">Sold</div>' : ''}
                     <div class="inventory-price">${escapeHtml(item.price)}</div>
                 </div>
@@ -142,6 +173,7 @@
                         : `<a href="https://wa.me/923338568856?text=${encodeURIComponent('Hi, I am interested in: ' + item.name)}" class="btn btn-primary" target="_blank"><i class="fab fa-whatsapp"></i> Inquire</a>`}
                 </div>
             `;
+            if (images.length > 1) setupGallery(card, images);
             grid.appendChild(card);
         });
 
